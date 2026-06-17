@@ -1,4 +1,4 @@
-// Sample data for Rugby Performance Coach — V1 (pré-Supabase)
+// Rugby Performance Coach — données structurées (prêt Supabase)
 // Toutes les chaînes destinées à l'utilisateur sont en français.
 
 export type Profile = {
@@ -6,17 +6,35 @@ export type Profile = {
   taille_cm: number;
   poids_kg: number;
   postes: string[];
+  poste_principal: string;
+  sport: string;
   niveau: string;
   date_reprise: string; // ISO
+  objectif_court: string;
+  objectifs_long: string[];
 };
 
 export const profile: Profile = {
   prenom: "Joueur",
   taille_cm: 179,
   poids_kg: 84,
-  postes: ["Centre 12/13", "Ailier", "Demi de mêlée"],
+  poste_principal: "Centre 12/13",
+  postes: ["Centre 12/13", "Ailier", "Demi de mêlée (occasionnel)"],
+  sport: "Rugby à XV",
   niveau: "Fédérale 3 · Rugby à 7",
   date_reprise: "2026-07-22",
+  objectif_court:
+    "Arriver pleinement prêt pour la reprise pré-saison le 22 juillet.",
+  objectifs_long: [
+    "Augmenter la vitesse",
+    "Augmenter l'accélération",
+    "Augmenter la puissance",
+    "Améliorer la condition physique",
+    "Améliorer la mobilité",
+    "Réduire le risque de blessure",
+    "Améliorer la récupération",
+    "Améliorer la performance rugby",
+  ],
 };
 
 export type DailyCheckin = {
@@ -35,7 +53,10 @@ export type DailyCheckin = {
   notes?: string;
 };
 
-const today = new Date();
+// IMPORTANT : on fige la date de référence pour éviter les écarts SSR / client.
+// (la "date du jour" est calculée côté client dans les composants quand nécessaire).
+const REF_DATE = "2026-06-17";
+const today = new Date(REF_DATE);
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const daysAgo = (n: number) => {
   const d = new Date(today);
@@ -47,7 +68,7 @@ export const checkins: DailyCheckin[] = Array.from({ length: 14 }).map((_, i) =>
   const n = 13 - i;
   return {
     date: daysAgo(n),
-    sommeil_h: 6.5 + Math.sin(i / 2) * 0.8 + (i > 10 ? 0.5 : 0),
+    sommeil_h: Number((6.5 + Math.sin(i / 2) * 0.8 + (i > 10 ? 0.5 : 0)).toFixed(2)),
     qualite_sommeil: 6 + Math.round(Math.sin(i) + 2),
     energie: 6 + Math.round(Math.cos(i / 2) + 1),
     fatigue: 5 + Math.round(Math.sin(i / 3) + 1),
@@ -57,14 +78,13 @@ export const checkins: DailyCheckin[] = Array.from({ length: 14 }).map((_, i) =>
     douleur_hanche: Math.max(0, 1 + Math.round(Math.cos(i / 2))),
     douleur_pied: Math.max(0, 1 + (i % 5 === 0 ? 2 : 0)),
     douleur_genou: 0,
-    poids_kg: 84 + Math.sin(i / 3) * 0.6,
+    poids_kg: Number((84 + Math.sin(i / 3) * 0.6).toFixed(2)),
   };
 });
 
 export const lastCheckin = checkins[checkins.length - 1];
 
 export function computeReadiness(c: DailyCheckin): number {
-  // Score 0–100 — pondération athlète
   const sleep = Math.min(1, c.sommeil_h / 8) * 25;
   const sleepQ = (c.qualite_sommeil / 10) * 15;
   const energy = (c.energie / 10) * 20;
@@ -78,12 +98,21 @@ export function computeReadiness(c: DailyCheckin): number {
   return Math.round(sleep + sleepQ + energy + fatigue + stress + pain);
 }
 
+export function computeRecovery(c: DailyCheckin): number {
+  const sleep = Math.min(1, c.sommeil_h / 8) * 35;
+  const sleepQ = (c.qualite_sommeil / 10) * 25;
+  const fatigue = (1 - c.fatigue / 10) * 20;
+  const stress = (1 - c.stress / 10) * 10;
+  const pain =
+    (1 -
+      (c.douleur_ischio + c.douleur_hanche + c.douleur_pied + c.douleur_genou) /
+        40) *
+    10;
+  return Math.round(sleep + sleepQ + fatigue + stress + pain);
+}
+
 export const readinessToday = computeReadiness(lastCheckin);
-export const recoveryToday = Math.round(
-  ((lastCheckin.qualite_sommeil / 10) * 0.5 +
-    (1 - lastCheckin.fatigue / 10) * 0.5) *
-    100,
-);
+export const recoveryToday = computeRecovery(lastCheckin);
 
 export type SessionType =
   | "Force bas du corps"
@@ -120,7 +149,7 @@ export const sessions: TrainingSession[] = [
     id: "s-today",
     date: iso(today),
     type: "Force bas du corps",
-    titre: "Force MI — base posté­rieure",
+    titre: "Force MI — base postérieure",
     duree_min: 60,
     rpe_cible: 7,
     objectif:
@@ -243,7 +272,6 @@ export const sessions: TrainingSession[] = [
 
 export const todaySession = sessions[0];
 
-// Calendrier jusqu'au 22 juillet
 export type CalendarEntry = {
   date: string;
   type: SessionType | "Repos";
@@ -269,7 +297,6 @@ function buildCalendar(): CalendarEntry[] {
   for (let d = new Date(start); d <= target; d.setDate(d.getDate() + 1)) {
     const day = d.getDay();
     const entry = cycle[i % cycle.length];
-    // Dimanche = repos par défaut
     out.push({
       date: iso(new Date(d)),
       type: day === 0 ? "Repos" : entry.type,
@@ -292,35 +319,268 @@ export const painLogs: PainLog[] = checkins.flatMap((c) => [
   { date: c.date, zone: "Genou (LLI)", niveau: c.douleur_genou },
 ]);
 
-export const injuryHistory = [
-  { zone: "Ischio droit", note: "Récidive — surveillance volume sprint" },
-  { zone: "Hanche", note: "Raideur chronique — mobilité quotidienne" },
-  { zone: "Pied", note: "Douleur plantaire — gestion impacts" },
-  { zone: "Genou gauche", note: "Entorse LLI — renforcer chaîne latérale" },
-  { zone: "Tibia", note: "Ancienne fracture — surveiller charge impact" },
+// Antécédents médicaux détaillés
+export type InjuryRecord = {
+  id: string;
+  zone: string;
+  cote?: "Gauche" | "Droit" | "Bilatéral";
+  type: string;
+  statut: "Récurrent" | "Antécédent" | "Surveillance";
+  annee?: string;
+  impact: string;
+  strategie: string;
+};
+
+export const injuryHistory: InjuryRecord[] = [
+  {
+    id: "ih-1",
+    zone: "Ischio-jambier",
+    cote: "Droit",
+    type: "Lésion récurrente · faiblesse",
+    statut: "Récurrent",
+    annee: "Plusieurs épisodes",
+    impact:
+      "Sensible aux volumes de sprint élevés et au soulevé de terre lourd.",
+    strategie:
+      "Excentriques Nordic curls 2×/sem · iso 45° avant sprint · progression sprint contrôlée · RDL léger contrôle.",
+  },
+  {
+    id: "ih-2",
+    zone: "Genou",
+    cote: "Gauche",
+    type: "Entorse LLI (ligament latéral interne)",
+    statut: "Antécédent",
+    impact:
+      "Stabilité latérale à surveiller sur changements d'appuis et plaquages côté faible.",
+    strategie:
+      "Renfo chaîne latérale (Copenhagen, side plank, glute med) · stabilité monopodale.",
+  },
+  {
+    id: "ih-3",
+    zone: "Tibia",
+    cote: "Droit",
+    type: "Ancienne fracture",
+    statut: "Surveillance",
+    impact:
+      "Tolérance aux impacts répétés à surveiller (plyométrie, terrain dur).",
+    strategie:
+      "Progression de charge impact graduelle · gainage du mollet · vérifier douleur post-séance.",
+  },
+  {
+    id: "ih-4",
+    zone: "Pied / voûte plantaire",
+    cote: "Bilatéral",
+    type: "Douleurs récurrentes · gêne plantaire",
+    statut: "Récurrent",
+    impact:
+      "Volume d'impacts à surveiller · raideur matinale possible.",
+    strategie:
+      "Short foot, toe yoga, calf raises lents · auto-massage voûte · alterner chaussures.",
+  },
+  {
+    id: "ih-5",
+    zone: "Hanche",
+    cote: "Bilatéral",
+    type: "Raideur chronique · gêne occasionnelle",
+    statut: "Récurrent",
+    impact:
+      "Limite l'amplitude en squat profond et la mobilité de course.",
+    strategie:
+      "Mobilité quotidienne 90/90 · couch stretch · CARs hanches · décompression.",
+  },
 ];
+
+// Nutrition — cibles & supplémentation
+export type SupplementTarget = {
+  id: string;
+  label: string;
+  dose: string;
+  moment: string;
+  pris: boolean;
+};
 
 export const nutritionToday = {
   proteines_g: 142,
-  proteines_cible_g: 170,
+  proteines_cible_g: 170, // ~2g/kg
   hydratation_l: 2.4,
   hydratation_cible_l: 3.5,
-  creatine: true,
-  collagene: true,
-  magnesium: true,
-  omega3: false,
+  glucides_g: 280,
+  glucides_cible_g: 380,
+  lipides_g: 75,
+  lipides_cible_g: 90,
+  calories: 2620,
+  calories_cible: 3100,
 };
 
+export const supplements: SupplementTarget[] = [
+  { id: "creatine", label: "Créatine monohydrate", dose: "5 g", moment: "Matin ou post-séance", pris: true },
+  { id: "collagene", label: "Collagène + Vit. C", dose: "10 g", moment: "30 min avant séance", pris: true },
+  { id: "magnesium", label: "Magnésium bisglycinate", dose: "300 mg", moment: "Soir", pris: false },
+  { id: "omega3", label: "Oméga 3 EPA/DHA", dose: "2 g", moment: "Avec un repas gras", pris: false },
+];
+
+// Journal photo des repas
+export type MealPhotoEntry = {
+  id: string;
+  date: string;
+  repas: "Petit-déjeuner" | "Déjeuner" | "Collation" | "Dîner";
+  resume: string;
+  calories: number;
+  proteines: number;
+  glucides: number;
+  lipides: number;
+  feedback: string;
+};
+
+export const mealJournal: MealPhotoEntry[] = [
+  {
+    id: "m-1",
+    date: iso(today),
+    repas: "Déjeuner",
+    resume: "Poulet grillé, riz basmati, brocolis, huile d'olive",
+    calories: 720,
+    proteines: 52,
+    glucides: 78,
+    lipides: 22,
+    feedback:
+      "Très bon profil post-entraînement. Ajouter une portion de fruits pour glycogène + micronutriments.",
+  },
+  {
+    id: "m-2",
+    date: daysAgo(1),
+    repas: "Petit-déjeuner",
+    resume: "Flocons d'avoine, fromage blanc 0%, myrtilles, amandes",
+    calories: 540,
+    proteines: 36,
+    glucides: 62,
+    lipides: 16,
+    feedback:
+      "Équilibré. Augmenter un peu les glucides un jour de séance vitesse (banane en plus).",
+  },
+];
+
+// Récupération
 export const recoveryChecklist = [
   { id: "froid", label: "Douche froide 2 min", done: true },
   { id: "etirements", label: "Étirements doux 10 min", done: true },
+  { id: "mobilite", label: "Mobilité hanches 5 min", done: true },
   { id: "magnesium", label: "Magnésium soir", done: false },
   { id: "ecran", label: "Coupure écrans 30 min avant lit", done: false },
   { id: "lit", label: "Au lit avant 23h", done: false },
 ];
 
+export const mobilityRoutine = [
+  { zone: "Hanches", exo: "90/90 hip switch", duree: "2×8/côté" },
+  { zone: "Hanches", exo: "Couch stretch", duree: "2×45s/côté" },
+  { zone: "Ischios", exo: "Étirement actif jambe tendue", duree: "2×30s" },
+  { zone: "Pieds", exo: "Toe yoga + short foot", duree: "2×10" },
+  { zone: "Dos", exo: "Cat-cow + T-spine rotation", duree: "2×8" },
+];
+
+// Préparation pré-saison — phases jusqu'au 22/07
+export type PrepPhase = {
+  id: string;
+  semaine: string;
+  titre: string;
+  focus: string;
+  charge: "Modérée" | "Élevée" | "Très élevée" | "Décharge";
+  contenu: string[];
+};
+
+export const preparationPlan: PrepPhase[] = [
+  {
+    id: "p-1",
+    semaine: "S −5 (17–23 juin)",
+    titre: "Phase 1 — Réathlétisation",
+    focus: "Mobilité, base de force, tolérance impact",
+    charge: "Modérée",
+    contenu: [
+      "3× Force générale (squat, RDL, bench, tractions)",
+      "2× Mobilité hanches + pieds",
+      "1× Conditioning aérobie continu (35 min Z2)",
+      "Prévention ischio quotidienne (iso 30s + Nordic léger)",
+    ],
+  },
+  {
+    id: "p-2",
+    semaine: "S −4 (24–30 juin)",
+    titre: "Phase 2 — Force max & accélération",
+    focus: "Force maximale, sorties de starts 10 m",
+    charge: "Élevée",
+    contenu: [
+      "3× Force lourde (back squat 5×3, bench 5×3, trap bar DL)",
+      "2× Vitesse — accélérations 10 m × 6–8",
+      "1× Conditioning intervalles (4×3' Z4)",
+      "Nordic curls 2×6 + Copenhagen 2×8",
+    ],
+  },
+  {
+    id: "p-3",
+    semaine: "S −3 (1–7 juillet)",
+    titre: "Phase 3 — Puissance & vitesse max",
+    focus: "Pliométrie, sprint 20–40 m, agilité",
+    charge: "Très élevée",
+    contenu: [
+      "2× Force-vitesse (cleans / jump squat / push-press)",
+      "2× Sprint 20–40 m + changements d'appuis (T-test, 5-10-5)",
+      "1× Conditioning rugby (répétitions d'efforts 6×40 m)",
+      "1× Mobilité longue + récupération active",
+    ],
+  },
+  {
+    id: "p-4",
+    semaine: "S −2 (8–14 juillet)",
+    titre: "Phase 4 — Spécifique rugby",
+    focus: "Profil rugby : contact, jeu réduit, conditioning intermittent",
+    charge: "Très élevée",
+    contenu: [
+      "2× Jeux réduits / passes sous fatigue",
+      "1× Force d'entretien (3×5 lourd)",
+      "2× Sprint répétés (RSA 10×30 m / 25s)",
+      "Mobilité quotidienne + protocole sommeil strict",
+    ],
+  },
+  {
+    id: "p-5",
+    semaine: "S −1 (15–21 juillet)",
+    titre: "Phase 5 — Décharge & affûtage",
+    focus: "Maintenir vivacité, baisser volume, fraîcheur",
+    charge: "Décharge",
+    contenu: [
+      "1× Force d'activation légère (3×3 explosif)",
+      "1× Sprint courts qualité (4×10 m + 3×20 m)",
+      "2× Mobilité + récupération (sauna, marche)",
+      "Sommeil ≥ 8h, hydratation, repas glycogène J−1",
+    ],
+  },
+  {
+    id: "p-6",
+    semaine: "22 juillet",
+    titre: "Jour J — Reprise",
+    focus: "Arriver frais, mobile et confiant",
+    charge: "Modérée",
+    contenu: [
+      "Petit-déj riche en glucides 3h avant",
+      "Échauffement long (15 min) + mobilité hanches",
+      "Hydratation 500 ml + électrolytes",
+      "Visualisation 5 min",
+    ],
+  },
+];
+
+// Objectif hebdo
+export const weeklyObjective = {
+  titre: "Verrouiller la base postérieure",
+  detail: "3 séances de force MI + Nordic curls 2× cette semaine",
+  progression: 60, // %
+  cible_seances: 5,
+  seances_faites: 3,
+};
+
 export const seasonStart = new Date("2026-07-22");
-export function daysUntil(date: Date): number {
-  const ms = date.getTime() - new Date().setHours(0, 0, 0, 0);
+export function daysUntil(date: Date, now: Date = new Date()): number {
+  const ms = date.getTime() - new Date(now).setHours(0, 0, 0, 0);
   return Math.max(0, Math.ceil(ms / 86400000));
 }
+
+export const TOTAL_PREP_DAYS = 35; // 17/06 → 22/07

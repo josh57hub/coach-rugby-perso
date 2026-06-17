@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RecuperationRouteImport } from './routes/recuperation'
+import { Route as ProfilRouteImport } from './routes/profil'
+import { Route as PreparationRouteImport } from './routes/preparation'
 import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as CheckInRouteImport } from './routes/check-in'
@@ -18,10 +20,21 @@ import { Route as BlessuresRouteImport } from './routes/blessures'
 import { Route as AnalytiqueRouteImport } from './routes/analytique'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SeanceIdRouteImport } from './routes/seance.$id'
+import { Route as NutritionPhotoRouteImport } from './routes/nutrition.photo'
 
 const RecuperationRoute = RecuperationRouteImport.update({
   id: '/recuperation',
   path: '/recuperation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfilRoute = ProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PreparationRoute = PreparationRouteImport.update({
+  id: '/preparation',
+  path: '/preparation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NutritionRoute = NutritionRouteImport.update({
@@ -64,6 +77,11 @@ const SeanceIdRoute = SeanceIdRouteImport.update({
   path: '/seance/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NutritionPhotoRoute = NutritionPhotoRouteImport.update({
+  id: '/photo',
+  path: '/photo',
+  getParentRoute: () => NutritionRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -72,8 +90,11 @@ export interface FileRoutesByFullPath {
   '/calendrier': typeof CalendrierRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRoute
-  '/nutrition': typeof NutritionRoute
+  '/nutrition': typeof NutritionRouteWithChildren
+  '/preparation': typeof PreparationRoute
+  '/profil': typeof ProfilRoute
   '/recuperation': typeof RecuperationRoute
+  '/nutrition/photo': typeof NutritionPhotoRoute
   '/seance/$id': typeof SeanceIdRoute
 }
 export interface FileRoutesByTo {
@@ -83,8 +104,11 @@ export interface FileRoutesByTo {
   '/calendrier': typeof CalendrierRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRoute
-  '/nutrition': typeof NutritionRoute
+  '/nutrition': typeof NutritionRouteWithChildren
+  '/preparation': typeof PreparationRoute
+  '/profil': typeof ProfilRoute
   '/recuperation': typeof RecuperationRoute
+  '/nutrition/photo': typeof NutritionPhotoRoute
   '/seance/$id': typeof SeanceIdRoute
 }
 export interface FileRoutesById {
@@ -95,8 +119,11 @@ export interface FileRoutesById {
   '/calendrier': typeof CalendrierRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRoute
-  '/nutrition': typeof NutritionRoute
+  '/nutrition': typeof NutritionRouteWithChildren
+  '/preparation': typeof PreparationRoute
+  '/profil': typeof ProfilRoute
   '/recuperation': typeof RecuperationRoute
+  '/nutrition/photo': typeof NutritionPhotoRoute
   '/seance/$id': typeof SeanceIdRoute
 }
 export interface FileRouteTypes {
@@ -109,7 +136,10 @@ export interface FileRouteTypes {
     | '/check-in'
     | '/coach'
     | '/nutrition'
+    | '/preparation'
+    | '/profil'
     | '/recuperation'
+    | '/nutrition/photo'
     | '/seance/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -120,7 +150,10 @@ export interface FileRouteTypes {
     | '/check-in'
     | '/coach'
     | '/nutrition'
+    | '/preparation'
+    | '/profil'
     | '/recuperation'
+    | '/nutrition/photo'
     | '/seance/$id'
   id:
     | '__root__'
@@ -131,7 +164,10 @@ export interface FileRouteTypes {
     | '/check-in'
     | '/coach'
     | '/nutrition'
+    | '/preparation'
+    | '/profil'
     | '/recuperation'
+    | '/nutrition/photo'
     | '/seance/$id'
   fileRoutesById: FileRoutesById
 }
@@ -142,7 +178,9 @@ export interface RootRouteChildren {
   CalendrierRoute: typeof CalendrierRoute
   CheckInRoute: typeof CheckInRoute
   CoachRoute: typeof CoachRoute
-  NutritionRoute: typeof NutritionRoute
+  NutritionRoute: typeof NutritionRouteWithChildren
+  PreparationRoute: typeof PreparationRoute
+  ProfilRoute: typeof ProfilRoute
   RecuperationRoute: typeof RecuperationRoute
   SeanceIdRoute: typeof SeanceIdRoute
 }
@@ -154,6 +192,20 @@ declare module '@tanstack/react-router' {
       path: '/recuperation'
       fullPath: '/recuperation'
       preLoaderRoute: typeof RecuperationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profil': {
+      id: '/profil'
+      path: '/profil'
+      fullPath: '/profil'
+      preLoaderRoute: typeof ProfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/preparation': {
+      id: '/preparation'
+      path: '/preparation'
+      fullPath: '/preparation'
+      preLoaderRoute: typeof PreparationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/nutrition': {
@@ -212,8 +264,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SeanceIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/nutrition/photo': {
+      id: '/nutrition/photo'
+      path: '/photo'
+      fullPath: '/nutrition/photo'
+      preLoaderRoute: typeof NutritionPhotoRouteImport
+      parentRoute: typeof NutritionRoute
+    }
   }
 }
+
+interface NutritionRouteChildren {
+  NutritionPhotoRoute: typeof NutritionPhotoRoute
+}
+
+const NutritionRouteChildren: NutritionRouteChildren = {
+  NutritionPhotoRoute: NutritionPhotoRoute,
+}
+
+const NutritionRouteWithChildren = NutritionRoute._addFileChildren(
+  NutritionRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -222,7 +293,9 @@ const rootRouteChildren: RootRouteChildren = {
   CalendrierRoute: CalendrierRoute,
   CheckInRoute: CheckInRoute,
   CoachRoute: CoachRoute,
-  NutritionRoute: NutritionRoute,
+  NutritionRoute: NutritionRouteWithChildren,
+  PreparationRoute: PreparationRoute,
+  ProfilRoute: ProfilRoute,
   RecuperationRoute: RecuperationRoute,
   SeanceIdRoute: SeanceIdRoute,
 }
