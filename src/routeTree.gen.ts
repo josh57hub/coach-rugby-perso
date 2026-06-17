@@ -9,38 +9,195 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RecuperationRouteImport } from './routes/recuperation'
+import { Route as NutritionRouteImport } from './routes/nutrition'
+import { Route as CoachRouteImport } from './routes/coach'
+import { Route as CheckInRouteImport } from './routes/check-in'
+import { Route as CalendrierRouteImport } from './routes/calendrier'
+import { Route as BlessuresRouteImport } from './routes/blessures'
+import { Route as AnalytiqueRouteImport } from './routes/analytique'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SeanceIdRouteImport } from './routes/seance.$id'
 
+const RecuperationRoute = RecuperationRouteImport.update({
+  id: '/recuperation',
+  path: '/recuperation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NutritionRoute = NutritionRouteImport.update({
+  id: '/nutrition',
+  path: '/nutrition',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CoachRoute = CoachRouteImport.update({
+  id: '/coach',
+  path: '/coach',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckInRoute = CheckInRouteImport.update({
+  id: '/check-in',
+  path: '/check-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalendrierRoute = CalendrierRouteImport.update({
+  id: '/calendrier',
+  path: '/calendrier',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlessuresRoute = BlessuresRouteImport.update({
+  id: '/blessures',
+  path: '/blessures',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalytiqueRoute = AnalytiqueRouteImport.update({
+  id: '/analytique',
+  path: '/analytique',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SeanceIdRoute = SeanceIdRouteImport.update({
+  id: '/seance/$id',
+  path: '/seance/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/analytique': typeof AnalytiqueRoute
+  '/blessures': typeof BlessuresRoute
+  '/calendrier': typeof CalendrierRoute
+  '/check-in': typeof CheckInRoute
+  '/coach': typeof CoachRoute
+  '/nutrition': typeof NutritionRoute
+  '/recuperation': typeof RecuperationRoute
+  '/seance/$id': typeof SeanceIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/analytique': typeof AnalytiqueRoute
+  '/blessures': typeof BlessuresRoute
+  '/calendrier': typeof CalendrierRoute
+  '/check-in': typeof CheckInRoute
+  '/coach': typeof CoachRoute
+  '/nutrition': typeof NutritionRoute
+  '/recuperation': typeof RecuperationRoute
+  '/seance/$id': typeof SeanceIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/analytique': typeof AnalytiqueRoute
+  '/blessures': typeof BlessuresRoute
+  '/calendrier': typeof CalendrierRoute
+  '/check-in': typeof CheckInRoute
+  '/coach': typeof CoachRoute
+  '/nutrition': typeof NutritionRoute
+  '/recuperation': typeof RecuperationRoute
+  '/seance/$id': typeof SeanceIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/analytique'
+    | '/blessures'
+    | '/calendrier'
+    | '/check-in'
+    | '/coach'
+    | '/nutrition'
+    | '/recuperation'
+    | '/seance/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/analytique'
+    | '/blessures'
+    | '/calendrier'
+    | '/check-in'
+    | '/coach'
+    | '/nutrition'
+    | '/recuperation'
+    | '/seance/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/analytique'
+    | '/blessures'
+    | '/calendrier'
+    | '/check-in'
+    | '/coach'
+    | '/nutrition'
+    | '/recuperation'
+    | '/seance/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AnalytiqueRoute: typeof AnalytiqueRoute
+  BlessuresRoute: typeof BlessuresRoute
+  CalendrierRoute: typeof CalendrierRoute
+  CheckInRoute: typeof CheckInRoute
+  CoachRoute: typeof CoachRoute
+  NutritionRoute: typeof NutritionRoute
+  RecuperationRoute: typeof RecuperationRoute
+  SeanceIdRoute: typeof SeanceIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/recuperation': {
+      id: '/recuperation'
+      path: '/recuperation'
+      fullPath: '/recuperation'
+      preLoaderRoute: typeof RecuperationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nutrition': {
+      id: '/nutrition'
+      path: '/nutrition'
+      fullPath: '/nutrition'
+      preLoaderRoute: typeof NutritionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/coach': {
+      id: '/coach'
+      path: '/coach'
+      fullPath: '/coach'
+      preLoaderRoute: typeof CoachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/check-in': {
+      id: '/check-in'
+      path: '/check-in'
+      fullPath: '/check-in'
+      preLoaderRoute: typeof CheckInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calendrier': {
+      id: '/calendrier'
+      path: '/calendrier'
+      fullPath: '/calendrier'
+      preLoaderRoute: typeof CalendrierRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blessures': {
+      id: '/blessures'
+      path: '/blessures'
+      fullPath: '/blessures'
+      preLoaderRoute: typeof BlessuresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytique': {
+      id: '/analytique'
+      path: '/analytique'
+      fullPath: '/analytique'
+      preLoaderRoute: typeof AnalytiqueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +205,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/seance/$id': {
+      id: '/seance/$id'
+      path: '/seance/$id'
+      fullPath: '/seance/$id'
+      preLoaderRoute: typeof SeanceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AnalytiqueRoute: AnalytiqueRoute,
+  BlessuresRoute: BlessuresRoute,
+  CalendrierRoute: CalendrierRoute,
+  CheckInRoute: CheckInRoute,
+  CoachRoute: CoachRoute,
+  NutritionRoute: NutritionRoute,
+  RecuperationRoute: RecuperationRoute,
+  SeanceIdRoute: SeanceIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
