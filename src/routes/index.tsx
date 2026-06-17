@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -6,8 +7,10 @@ import {
   ClipboardList,
   Flame,
   Moon,
+  ShieldCheck,
   Sparkles,
   Target,
+  User,
   Utensils,
   Zap,
 } from "lucide-react";
@@ -15,12 +18,15 @@ import { AppShell } from "@/components/app-shell";
 import { RingScore } from "@/components/ring-score";
 import {
   daysUntil,
+  injuryHistory,
   lastCheckin,
   profile,
   readinessToday,
   recoveryToday,
   seasonStart,
   todaySession,
+  weeklyObjective,
+  TOTAL_PREP_DAYS,
 } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/")({
@@ -38,26 +44,41 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
-  const jours = daysUntil(seasonStart);
-  const totalJours = 60; // fenêtre d'affichage
-  const progression = Math.max(0, Math.min(100, ((totalJours - jours) / totalJours) * 100));
+  // Évite l'erreur d'hydratation : on calcule les jours côté client uniquement.
+  const [jours, setJours] = useState<number | null>(null);
+  useEffect(() => setJours(daysUntil(seasonStart)), []);
+  const progression =
+    jours == null
+      ? 0
+      : Math.max(0, Math.min(100, ((TOTAL_PREP_DAYS - jours) / TOTAL_PREP_DAYS) * 100));
+
   const painMax = Math.max(
     lastCheckin.douleur_ischio,
     lastCheckin.douleur_hanche,
     lastCheckin.douleur_pied,
     lastCheckin.douleur_genou,
   );
+  const recurrents = injuryHistory.filter((i) => i.statut === "Récurrent").length;
 
   return (
     <AppShell>
-      <header className="mb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
-          Bonjour, {profile.prenom}
-        </p>
-        <h1 className="text-3xl font-black leading-tight">État du jour</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {profile.postes[0]} · {profile.niveau}
-        </p>
+      <header className="mb-6 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
+            Bonjour, {profile.prenom}
+          </p>
+          <h1 className="text-3xl font-black leading-tight">État du jour</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {profile.poste_principal} · {profile.niveau}
+          </p>
+        </div>
+        <Link
+          to="/profil"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-graphite-2 text-foreground"
+          aria-label="Profil"
+        >
+          <User className="h-5 w-5" />
+        </Link>
       </header>
 
       {/* Scores */}
@@ -73,26 +94,36 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* Alerte blessure */}
-      {painMax >= 3 && (
-        <Link
-          to="/blessures"
-          className="card-elevated mb-4 flex items-center justify-between gap-3 border-primary/40 p-4 ring-glow"
-        >
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
-              <AlertTriangle className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">Alerte — ischio droit</p>
-              <p className="truncate text-xs text-muted-foreground">
-                Douleur {lastCheckin.douleur_ischio}/10 · volume sprint réduit
-              </p>
-            </div>
+      {/* État blessure */}
+      <Link
+        to="/blessures"
+        className={
+          "card-elevated mb-4 flex items-center justify-between gap-3 p-4 " +
+          (painMax >= 3 ? "border-primary/40 ring-glow" : "")
+        }
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <div
+            className={
+              "grid h-10 w-10 shrink-0 place-items-center rounded-xl " +
+              (painMax >= 3 ? "bg-primary/15 text-primary" : "bg-chart-5/15 text-chart-5")
+            }
+          >
+            {painMax >= 3 ? <AlertTriangle className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
           </div>
-          <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-        </Link>
-      )}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">
+              {painMax >= 3 ? "Alerte — ischio droit" : "Aucune alerte active"}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {painMax >= 3
+                ? `Douleur ${painMax}/10 · adaptation séance recommandée`
+                : `${recurrents} antécédents récurrents sous surveillance`}
+            </p>
+          </div>
+        </div>
+        <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </Link>
 
       {/* Séance du jour */}
       <Link to="/seance/$id" params={{ id: todaySession.id }} className="card-elevated mb-4 block p-5">
@@ -103,9 +134,7 @@ function Dashboard() {
           </span>
         </div>
         <h2 className="mt-2 text-xl font-black leading-tight">{todaySession.titre}</h2>
-        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-          {todaySession.objectif}
-        </p>
+        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{todaySession.objectif}</p>
         <div className="mt-4 flex items-center justify-between">
           <span className="rounded-full bg-graphite-2 px-3 py-1 text-xs font-semibold">
             {todaySession.type}
@@ -116,14 +145,34 @@ function Dashboard() {
         </div>
       </Link>
 
-      {/* Objectif reprise */}
+      {/* Objectif hebdo */}
       <section className="card-elevated mb-4 p-5">
         <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-          <Target className="h-3.5 w-3.5" /> Objectif reprise
+          <Target className="h-3.5 w-3.5" /> Objectif de la semaine
+        </div>
+        <p className="mt-2 font-display text-base font-bold leading-tight">{weeklyObjective.titre}</p>
+        <p className="text-xs text-muted-foreground">{weeklyObjective.detail}</p>
+        <div className="mt-3 flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">
+            {weeklyObjective.seances_faites} / {weeklyObjective.cible_seances} séances
+          </span>
+          <span className="font-semibold text-primary">{weeklyObjective.progression} %</span>
+        </div>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-graphite-2">
+          <div className="h-full rounded-full bg-gradient-to-r from-primary to-blood-glow" style={{ width: `${weeklyObjective.progression}%` }} />
+        </div>
+      </section>
+
+      {/* Objectif reprise */}
+      <Link to="/preparation" className="card-elevated mb-4 block p-5">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+          <CalendarCheck className="h-3.5 w-3.5" /> Préparation pré-saison
         </div>
         <div className="mt-2 flex items-end justify-between">
           <div>
-            <p className="font-display text-3xl font-black">J − {jours}</p>
+            <p className="font-display text-3xl font-black">
+              {jours == null ? "—" : `J − ${jours}`}
+            </p>
             <p className="text-xs text-muted-foreground">Reprise le 22 juillet</p>
           </div>
           <span className="text-xs font-semibold text-muted-foreground">
@@ -131,12 +180,9 @@ function Dashboard() {
           </span>
         </div>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-graphite-2">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-primary to-blood-glow"
-            style={{ width: `${progression}%` }}
-          />
+          <div className="h-full rounded-full bg-gradient-to-r from-primary to-blood-glow" style={{ width: `${progression}%` }} />
         </div>
-      </section>
+      </Link>
 
       {/* Quick actions */}
       <section className="mb-2">
@@ -145,9 +191,9 @@ function Dashboard() {
         </h3>
         <div className="grid grid-cols-2 gap-3">
           <Quick to="/check-in" icon={ClipboardList} label="Check-in du jour" hint="< 60 s" />
-          <Quick to="/calendrier" icon={CalendarCheck} label="Calendrier" hint="Jusqu'au 22/07" />
+          <Quick to="/preparation" icon={Target} label="Roadmap 22/07" hint="6 phases" />
           <Quick to="/recuperation" icon={Sparkles} label="Routine récup" hint="Soir" />
-          <Quick to="/nutrition" icon={Utensils} label="Nutrition" hint="170g prot." />
+          <Quick to="/nutrition" icon={Utensils} label="Nutrition" hint="Photo IA" />
         </div>
       </section>
     </AppShell>
@@ -167,9 +213,7 @@ function Stat({
     <div className="rounded-xl bg-graphite-2/60 px-2 py-3">
       <Icon className="mx-auto h-4 w-4 text-muted-foreground" />
       <p className="mt-1 font-display text-base font-bold tabular-nums">{value}</p>
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-        {label}
-      </p>
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
     </div>
   );
 }
@@ -186,10 +230,7 @@ function Quick({
   hint: string;
 }) {
   return (
-    <Link
-      to={to}
-      className="card-elevated flex flex-col gap-2 p-4 transition active:scale-[0.98]"
-    >
+    <Link to={to} className="card-elevated flex flex-col gap-2 p-4 transition active:scale-[0.98]">
       <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/15 text-primary">
         <Icon className="h-4 w-4" />
       </div>
