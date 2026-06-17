@@ -21,9 +21,6 @@ dist-ssr
 .dev.vars
 
 # Variables d'environnement (clés Supabase, secrets) — ne jamais committer
-.env
-.env.local
-.env.*.local
 
 # Editor directories and files
 .vscode/*
