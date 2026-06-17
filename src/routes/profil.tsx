@@ -1,7 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Target, Trophy, Ruler, Weight, MapPin, Calendar, ArrowRight, Activity } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { Target, Trophy, Ruler, Weight, MapPin, Calendar, ArrowRight, Activity, LogOut } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app-shell";
 import { profile, injuryHistory } from "@/lib/mock-data";
+import { signOut } from "@/lib/auth.functions";
 
 export const Route = createFileRoute("/profil")({
   head: () => ({ meta: [{ title: "Profil athlète — Rugby Coach" }] }),
@@ -9,6 +11,14 @@ export const Route = createFileRoute("/profil")({
 });
 
 function Profil() {
+  const nav = useNavigate();
+  const doSignOut = useServerFn(signOut);
+
+  const logout = async () => {
+    await doSignOut();
+    nav({ to: "/login" });
+  };
+
   return (
     <AppShell>
       <PageHeader eyebrow="Athlète" title="Profil de performance" />
@@ -84,6 +94,13 @@ function Profil() {
         </div>
         <ArrowRight className="h-4 w-4 text-muted-foreground" />
       </Link>
+
+      <button
+        onClick={logout}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-graphite-2/60 py-3.5 text-sm font-semibold text-muted-foreground active:scale-[0.99]"
+      >
+        <LogOut className="h-4 w-4" /> Se déconnecter
+      </button>
     </AppShell>
   );
 }

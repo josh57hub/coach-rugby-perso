@@ -13,6 +13,7 @@ import { Route as RecuperationRouteImport } from './routes/recuperation'
 import { Route as ProfilRouteImport } from './routes/profil'
 import { Route as PreparationRouteImport } from './routes/preparation'
 import { Route as NutritionRouteImport } from './routes/nutrition'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as CalendrierRouteImport } from './routes/calendrier'
@@ -40,6 +41,11 @@ const PreparationRoute = PreparationRouteImport.update({
 const NutritionRoute = NutritionRouteImport.update({
   id: '/nutrition',
   path: '/nutrition',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CoachRoute = CoachRouteImport.update({
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/calendrier': typeof CalendrierRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRoute
+  '/login': typeof LoginRoute
   '/nutrition': typeof NutritionRouteWithChildren
   '/preparation': typeof PreparationRoute
   '/profil': typeof ProfilRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/calendrier': typeof CalendrierRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRoute
+  '/login': typeof LoginRoute
   '/nutrition': typeof NutritionRouteWithChildren
   '/preparation': typeof PreparationRoute
   '/profil': typeof ProfilRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/calendrier': typeof CalendrierRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRoute
+  '/login': typeof LoginRoute
   '/nutrition': typeof NutritionRouteWithChildren
   '/preparation': typeof PreparationRoute
   '/profil': typeof ProfilRoute
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/calendrier'
     | '/check-in'
     | '/coach'
+    | '/login'
     | '/nutrition'
     | '/preparation'
     | '/profil'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/calendrier'
     | '/check-in'
     | '/coach'
+    | '/login'
     | '/nutrition'
     | '/preparation'
     | '/profil'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/calendrier'
     | '/check-in'
     | '/coach'
+    | '/login'
     | '/nutrition'
     | '/preparation'
     | '/profil'
@@ -178,6 +190,7 @@ export interface RootRouteChildren {
   CalendrierRoute: typeof CalendrierRoute
   CheckInRoute: typeof CheckInRoute
   CoachRoute: typeof CoachRoute
+  LoginRoute: typeof LoginRoute
   NutritionRoute: typeof NutritionRouteWithChildren
   PreparationRoute: typeof PreparationRoute
   ProfilRoute: typeof ProfilRoute
@@ -213,6 +226,13 @@ declare module '@tanstack/react-router' {
       path: '/nutrition'
       fullPath: '/nutrition'
       preLoaderRoute: typeof NutritionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/coach': {
@@ -293,6 +313,7 @@ const rootRouteChildren: RootRouteChildren = {
   CalendrierRoute: CalendrierRoute,
   CheckInRoute: CheckInRoute,
   CoachRoute: CoachRoute,
+  LoginRoute: LoginRoute,
   NutritionRoute: NutritionRouteWithChildren,
   PreparationRoute: PreparationRoute,
   ProfilRoute: ProfilRoute,
@@ -302,3 +323,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

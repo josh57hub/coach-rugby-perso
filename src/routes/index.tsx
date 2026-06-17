@@ -19,15 +19,14 @@ import { RingScore } from "@/components/ring-score";
 import {
   daysUntil,
   injuryHistory,
-  lastCheckin,
   profile,
-  readinessToday,
-  recoveryToday,
   seasonStart,
   todaySession,
   weeklyObjective,
   TOTAL_PREP_DAYS,
 } from "@/lib/mock-data";
+import { getTodayCheckin } from "@/lib/checkin.functions";
+import { computeReadiness, computeRecovery, maxPain, PAIN_ALERT_THRESHOLD } from "@/lib/scores";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -40,10 +39,16 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
+  loader: async () => {
+    const checkin = await getTodayCheckin();
+    return { checkin };
+  },
   component: Dashboard,
 });
 
 function Dashboard() {
+  const { checkin } = Route.useLoaderData();
+
   // Évite l'erreur d'hydratation : on calcule les jours côté client uniquement.
   const [jours, setJours] = useState<number | null>(null);
   useEffect(() => setJours(daysUntil(seasonStart)), []);
@@ -52,12 +57,9 @@ function Dashboard() {
       ? 0
       : Math.max(0, Math.min(100, ((TOTAL_PREP_DAYS - jours) / TOTAL_PREP_DAYS) * 100));
 
-  const painMax = Math.max(
-    lastCheckin.douleur_ischio,
-    lastCheckin.douleur_hanche,
-    lastCheckin.douleur_pied,
-    lastCheckin.douleur_genou,
-  );
+  const readiness = checkin ? computeReadiness(checkin) : null;
+  const recovery = checkin ? computeRecovery(checkin) : null;
+  const painMax = checkin ? maxPain(checkin) : 0;
   const recurrents = injuryHistory.filter((i) => i.statut === "Récurrent").length;
 
   return (
@@ -82,48 +84,65 @@ function Dashboard() {
       </header>
 
       {/* Scores */}
-      <section className="card-elevated mb-4 p-5">
-        <div className="grid grid-cols-2 gap-4">
-          <RingScore value={readinessToday} label="Readiness" sub="/ 100" />
-          <RingScore value={recoveryToday} label="Récupération" sub="/ 100" />
-        </div>
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <Stat icon={Moon} label="Sommeil" value={`${lastCheckin.sommeil_h.toFixed(1)}h`} />
-          <Stat icon={Flame} label="Énergie" value={`${lastCheckin.energie}/10`} />
-          <Stat icon={Zap} label="Charge sem." value="3 800" />
-        </div>
-      </section>
+      {checkin ? (
+        <section className="card-elevated mb-4 p-5">
+          <div className="grid grid-cols-2 gap-4">
+            <RingScore value={readiness ?? 0} label="Readiness" sub="/ 100" />
+            <RingScore value={recovery ?? 0} label="Récupération" sub="/ 100" />
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            <Stat icon={Moon} label="Sommeil" value={`${checkin.sommeil_h.toFixed(1)}h`} />
+            <Stat icon={Flame} label="Énergie" value={`${checkin.energie}/10`} />
+            <Stat icon={Zap} label="Charge sem." value="3 800" />
+          </div>
+        </section>
+      ) : (
+        <Link
+          to="/check-in"
+          className="card-elevated mb-4 flex items-center justify-between gap-3 p-5 ring-glow"
+        >
+          <div>
+            <p className="text-sm font-semibold">Check-in du jour à faire</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Readiness et récupération s'affichent une fois rempli · moins de 60s
+            </p>
+          </div>
+          <ArrowRight className="h-4 w-4 shrink-0 text-primary" />
+        </Link>
+      )}
 
       {/* État blessure */}
-      <Link
-        to="/blessures"
-        className={
-          "card-elevated mb-4 flex items-center justify-between gap-3 p-4 " +
-          (painMax >= 3 ? "border-primary/40 ring-glow" : "")
-        }
-      >
-        <div className="flex min-w-0 items-center gap-3">
-          <div
-            className={
-              "grid h-10 w-10 shrink-0 place-items-center rounded-xl " +
-              (painMax >= 3 ? "bg-primary/15 text-primary" : "bg-chart-5/15 text-chart-5")
-            }
-          >
-            {painMax >= 3 ? <AlertTriangle className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+      {checkin && (
+        <Link
+          to="/blessures"
+          className={
+            "card-elevated mb-4 flex items-center justify-between gap-3 p-4 " +
+            (painMax >= PAIN_ALERT_THRESHOLD ? "border-primary/40 ring-glow" : "")
+          }
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <div
+              className={
+                "grid h-10 w-10 shrink-0 place-items-center rounded-xl " +
+                (painMax >= PAIN_ALERT_THRESHOLD ? "bg-primary/15 text-primary" : "bg-chart-5/15 text-chart-5")
+              }
+            >
+              {painMax >= PAIN_ALERT_THRESHOLD ? <AlertTriangle className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">
+                {painMax >= PAIN_ALERT_THRESHOLD ? "Alerte douleur" : "Aucune alerte active"}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {painMax >= PAIN_ALERT_THRESHOLD
+                  ? `Douleur ${painMax}/10 · adaptation séance recommandée`
+                  : `${recurrents} antécédents récurrents sous surveillance`}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">
-              {painMax >= 3 ? "Alerte — ischio droit" : "Aucune alerte active"}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {painMax >= 3
-                ? `Douleur ${painMax}/10 · adaptation séance recommandée`
-                : `${recurrents} antécédents récurrents sous surveillance`}
-            </p>
-          </div>
-        </div>
-        <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-      </Link>
+          <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </Link>
+      )}
 
       {/* Séance du jour */}
       <Link to="/seance/$id" params={{ id: todaySession.id }} className="card-elevated mb-4 block p-5">
