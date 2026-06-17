@@ -1,15 +1,37 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app-shell";
-import { lastCheckin } from "@/lib/mock-data";
+import { getTodayCheckin, upsertCheckin } from "@/lib/checkin.functions";
 
 export const Route = createFileRoute("/check-in")({
   head: () => ({ meta: [{ title: "Check-in — Rugby Coach" }] }),
+  // Le check-in du jour (s'il existe déjà) est chargé côté serveur avant le
+  // premier rendu — pas de flash "tout à zéro" si l'utilisateur revient
+  // ajuster son check-in plus tard dans la journée.
+  loader: async () => {
+    const existing = await getTodayCheckin();
+    return { existing };
+  },
   component: CheckIn,
 });
 
-type Field = { key: string; label: string; min: number; max: number; suffix?: string };
+type FieldKey =
+  | "sommeil_h"
+  | "qualite_sommeil"
+  | "energie"
+  | "fatigue"
+  | "stress"
+  | "motivation"
+  | "douleur_ischio"
+  | "douleur_hanche"
+  | "douleur_pied"
+  | "douleur_genou"
+  | "poids_kg";
+
+type Field = { key: FieldKey; label: string; min: number; max: number; suffix?: string };
 
 const fields: Field[] = [
   { key: "sommeil_h", label: "Durée de sommeil", min: 0, max: 12, suffix: "h" },
@@ -25,21 +47,71 @@ const fields: Field[] = [
   { key: "poids_kg", label: "Poids", min: 60, max: 110, suffix: "kg" },
 ];
 
+// Valeurs neutres par défaut si aucun check-in n'existe encore pour aujourd'hui.
+const DEFAULTS: Record<FieldKey, number> = {
+  sommeil_h: 7,
+  qualite_sommeil: 7,
+  energie: 7,
+  fatigue: 4,
+  stress: 4,
+  motivation: 7,
+  douleur_ischio: 0,
+  douleur_hanche: 0,
+  douleur_pied: 0,
+  douleur_genou: 0,
+  poids_kg: 84,
+};
+
 function CheckIn() {
   const nav = useNavigate();
-  const [values, setValues] = useState<Record<string, number>>(() =>
-    Object.fromEntries(fields.map((f) => [f.key, (lastCheckin as never)[f.key] ?? 0])),
-  );
-  const [notes, setNotes] = useState("");
+  const { existing } = Route.useLoaderData();
+  const submitCheckin = useServerFn(upsertCheckin);
 
-  const submit = () => {
-    toast.success("Check-in enregistré", { description: "Recommandations mises à jour." });
-    nav({ to: "/" });
+  const [values, setValues] = useState<Record<FieldKey, number>>(() => {
+    if (!existing) return DEFAULTS;
+    return {
+      sommeil_h: existing.sommeil_h,
+      qualite_sommeil: existing.qualite_sommeil,
+      energie: existing.energie,
+      fatigue: existing.fatigue,
+      stress: existing.stress,
+      motivation: existing.motivation,
+      douleur_ischio: existing.douleur_ischio,
+      douleur_hanche: existing.douleur_hanche,
+      douleur_pied: existing.douleur_pied,
+      douleur_genou: existing.douleur_genou,
+      poids_kg: existing.poids_kg ?? DEFAULTS.poids_kg,
+    };
+  });
+  const [notes, setNotes] = useState(existing?.notes ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    setSaving(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      await submitCheckin({
+        data: {
+          date: today,
+          ...values,
+          notes: notes || undefined,
+        },
+      });
+      toast.success("Check-in enregistré", { description: "Recommandations mises à jour." });
+      nav({ to: "/" });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur lors de l'enregistrement");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <AppShell>
-      <PageHeader eyebrow="< 60 secondes" title="Check-in du jour" />
+      <PageHeader
+        eyebrow={existing ? "Déjà rempli aujourd'hui · modifiable" : "< 60 secondes"}
+        title="Check-in du jour"
+      />
       <div className="space-y-3">
         {fields.map((f) => (
           <div key={f.key} className="card-elevated p-4">
@@ -77,9 +149,11 @@ function CheckIn() {
 
         <button
           onClick={submit}
-          className="sticky bottom-24 mt-4 w-full rounded-2xl bg-primary py-4 font-display text-base font-bold uppercase tracking-wider text-primary-foreground shadow-[0_10px_30px_-10px_var(--blood-glow)] active:scale-[0.99]"
+          disabled={saving}
+          className="sticky bottom-24 mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 font-display text-base font-bold uppercase tracking-wider text-primary-foreground shadow-[0_10px_30px_-10px_var(--blood-glow)] active:scale-[0.99] disabled:opacity-60"
         >
-          Valider le check-in
+          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+          {existing ? "Mettre à jour le check-in" : "Valider le check-in"}
         </button>
       </div>
     </AppShell>
